@@ -7,3 +7,6 @@
 ## Usage:
 - Open up the marker image here: https://github.com/soadzoor/Boilerplate_For_TypeScript_AugmentedReality/blob/master/src/assets/images/starWars.png
 - On another device (preferrably a handheld mobile device), open up this link: https://soadzoor.github.io/Boilerplate_For_TypeScript_AugmentedReality/
+
+- You should be able to see a dancing-stormtrooper on the marker, like this:
+![Demo](demo.jpg)
