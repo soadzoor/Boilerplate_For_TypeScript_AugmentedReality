@@ -1,0 +1,21 @@
+{
+  "name": "Title",
+  "description": "Title",
+  "version": "0.0.1",
+  "scripts": {
+    "build dev": "node build/build dev",
+    "build prod": "node build/build prod"
+  },
+  "author": "Peter Varga",
+  "dependencies": {
+    "@types/three": "^0.92.25",
+    "concat": "^1.0.3",
+    "fs": "0.0.2",
+    "fs-extra": "^0.24.0",
+    "shelljs": "^0.6.0",
+    "typescript": "^2.9.2",
+    "uglify-es": "^3.3.9"
+  },
+  "repository": "",
+  "license": ""
+}
