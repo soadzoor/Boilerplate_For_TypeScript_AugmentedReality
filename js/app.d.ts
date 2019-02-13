@@ -23,6 +23,7 @@ declare class Scene {
     private _arToolkitContext;
     private _markerControls;
     private _markerRoot;
+    private _audio;
     constructor();
     private initLights;
     private initAR;
