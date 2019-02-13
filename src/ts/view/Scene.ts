@@ -16,9 +16,12 @@ class Scene
 	private _markerControls: any;
 
 	private _markerRoot: THREE.Group;
+	private _audio: HTMLAudioElement;
 
 	constructor()
 	{
+		this._audio = document.createElement('audio');
+		this._audio.src = `assets/audio/cantina.mp3`;
 		this._canvas = <HTMLCanvasElement>document.getElementById('myCanvas');
 		this._scene = new THREE.Scene();
 		this._camera = new THREE.Camera();
@@ -124,6 +127,15 @@ class Scene
 		if (this._sceneLoader.mixer)
 		{
 			this._sceneLoader.mixer.update(this._deltaTime);
+		}
+
+		if (this._markerRoot.visible)
+		{
+			this._audio.play();
+		}
+		else
+		{
+			this._audio.pause();
 		}
 
 		this._renderer.render(this._scene, this._camera);
