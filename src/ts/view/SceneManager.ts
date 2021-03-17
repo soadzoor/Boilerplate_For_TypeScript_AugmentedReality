@@ -1,6 +1,7 @@
 declare const THREE: any;
 declare const THREEx: any;
 
+import {request} from "node:http";
 import {SceneLoader} from "./SceneLoader";
 
 export class SceneManager
@@ -28,11 +29,24 @@ export class SceneManager
 		this._camera = new THREE.Camera();
 		this._clock = new THREE.Clock();
 
+		this.init();
+	}
+
+	private async init()
+	{
 		this.initLights();
-		this.initAR();
 		this.initRenderer();
+		window.addEventListener("arjs-video-loaded", () =>
+		{
+			// TODO: this is a dirty hack, although it's pretty much the same as in the official example..:
+			// https://github.com/AR-js-org/AR.js/blob/master/three.js/examples/nft.html
+			setTimeout(() =>
+			{
+				this.onWindowResize();
+			}, 1000);
+		});
+		await this.initAR();
 		this.initMeshes();
-		this.onWindowResize();
 		this.animate(0);
 	}
 
@@ -50,21 +64,27 @@ export class SceneManager
 
 	private initAR()
 	{
-		this._arToolkitSource = new THREEx.ArToolkitSource({sourceType: "webcam"});
-		this._arToolkitSource.init(() =>
+		return new Promise<void>((resolve, reject) =>
 		{
-			this.onWindowResize();
-		});
+			this._arToolkitSource = new THREEx.ArToolkitSource({
+				sourceType: "webcam"
+			});
+			this._arToolkitSource.init(() =>
+			{
+				resolve();
+			});
 
-		this._arToolkitContext = new THREEx.ArToolkitContext({
-			cameraParametersUrl: "assets/data/camera_para.dat",
-			detectionMode: "mono"
-		});
+			this._arToolkitContext = new THREEx.ArToolkitContext({
+				cameraParametersUrl: "assets/data/camera_para.dat",
+				detectionMode: "mono"
+			});
 
-		this._arToolkitContext.init(onCompleted =>
-		{
-			this._camera.projectionMatrix.copy(this._arToolkitContext.getProjectionMatrix());
+			this._arToolkitContext.init(onCompleted =>
+			{
+				this._camera.projectionMatrix.copy(this._arToolkitContext.getProjectionMatrix());
+			});
 		});
+		
 	}
 
 	private initMeshes()
