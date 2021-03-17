@@ -1,28 +1,29 @@
-///<reference path='./SceneLoader.ts'/>
-
+declare const THREE: any;
 declare const THREEx: any;
-class Scene
+
+import {SceneLoader} from "./SceneLoader";
+
+export class SceneManager
 {
-	private _canvas: HTMLCanvasElement;
-	private _scene: THREE.Scene;
-	private _camera: THREE.Camera;
-	private _renderer: THREE.WebGLRenderer;
+	private _canvas: HTMLCanvasElement = document.getElementById("myCanvas") as HTMLCanvasElement;
+	private _scene: any;//THREE.Scene;
+	private _camera: any;//THREE.Camera;
+	private _renderer: any;//THREE.WebGLRenderer;
 	private _sceneLoader: SceneLoader;
 
-	private _clock: THREE.Clock;
+	private _clock: any;//THREE.Clock;
 	private _deltaTime: number;
 	private _arToolkitSource: any;
 	private _arToolkitContext: any;
 	private _markerControls: any;
 
-	private _markerRoot: THREE.Group;
+	private _markerRoot: any;//THREE.Group;
 	private _audio: HTMLAudioElement;
 
 	constructor()
 	{
-		this._audio = document.createElement('audio');
-		this._audio.src = `assets/audio/cantina.mp3`;
-		this._canvas = <HTMLCanvasElement>document.getElementById('myCanvas');
+		this._audio = document.createElement("audio");
+		this._audio.src = "assets/audio/cantina.mp3";
 		this._scene = new THREE.Scene();
 		this._camera = new THREE.Camera();
 		this._clock = new THREE.Clock();
@@ -37,9 +38,9 @@ class Scene
 
 	private initLights()
 	{
-		const light1  = new THREE.AmbientLight(0xFFFFFF, 0.1);
+		const light1 = new THREE.AmbientLight(0xFFFFFF, 0.1);
 
-		const light2  = new THREE.DirectionalLight(0xFFFFFF, 0.1);
+		const light2 = new THREE.DirectionalLight(0xFFFFFF, 0.1);
 		light2.position.set(0.5, 0, 0.866); // ~60ยบ
 
 		const light3 = new THREE.HemisphereLight(0xffffbb, 0x080820, 0.8);
@@ -49,15 +50,15 @@ class Scene
 
 	private initAR()
 	{
-		this._arToolkitSource = new THREEx.ArToolkitSource({sourceType: 'webcam'});
-		this._arToolkitSource.init(onReady =>
+		this._arToolkitSource = new THREEx.ArToolkitSource({sourceType: "webcam"});
+		this._arToolkitSource.init(() =>
 		{
 			this.onWindowResize();
 		});
 
 		this._arToolkitContext = new THREEx.ArToolkitContext({
-			cameraParametersUrl: 'assets/data/camera_para.dat',
-			detectionMode: 'mono'
+			cameraParametersUrl: "assets/data/camera_para.dat",
+			detectionMode: "mono"
 		});
 
 		this._arToolkitContext.init(onCompleted =>
@@ -71,26 +72,31 @@ class Scene
 		this._markerRoot = new THREE.Group();
 		this._scene.add(this._markerRoot);
 		this._markerControls = new THREEx.ArMarkerControls(this._arToolkitContext, this._markerRoot, {
-			type: 'pattern',
-			patternUrl: 'assets/data/starWars.patt'
+			type: "pattern",
+			patternUrl: "assets/data/starWars.patt"
 		})
-		this._sceneLoader = new SceneLoader(this, `assets/models/stormtrooper.glb`);
+		this._sceneLoader = new SceneLoader(this, "assets/models/stormtrooper.glb");
 	}
 
 	private initRenderer()
 	{
-		this._renderer = new THREE.WebGLRenderer({
-			antialias: true,
+		const contextAttributes = {
 			alpha: true,
-			canvas: this._canvas
+			antialias: true
+		};
+		const context = this._canvas.getContext("webgl2", contextAttributes) || this._canvas.getContext("experimental-webgl2", contextAttributes);
+		this._renderer = new THREE.WebGLRenderer({
+			canvas: this._canvas,
+			context: context as WebGL2RenderingContext,
+			...contextAttributes
 		});
 		this._renderer.setPixelRatio(window.devicePixelRatio);
 		this._renderer.setClearColor(0xECF8FF, 0);
-		this._renderer.gammaOutput = true;
+		this._renderer.outputEncoding = THREE.GammaEncoding;
 
-		this._renderer.context.canvas.addEventListener('webglcontextlost', this.onContextLost);
+		this._renderer.getContext().canvas.addEventListener("webglcontextlost", this.onContextLost);
 
-		window.addEventListener('resize', this.onWindowResize);
+		window.addEventListener("resize", this.onWindowResize);
 	}
 
 	private onWindowResize = () =>
@@ -103,7 +109,7 @@ class Scene
 	{
 		event.preventDefault();
 
-		alert('Unfortunately WebGL has crashed. Please reload the page to continue!');
+		alert("Unfortunately WebGL has crashed. Please reload the page to continue!");
 	};
 
 	public get scene()

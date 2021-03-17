@@ -23,7 +23,7 @@ body {
 	flex-direction: column;
 }
 
-main {
+#playGround {
 	flex: 1;
 	display: flex;
 	touch-action: none;

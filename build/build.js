@@ -1,144 +1,190 @@
-
-// this is only the prod build
-
-var args = process.argv.slice(2);
-var arg0 = args[0];
-
-
-var bt = require("./build_tools");
-var fs = require("fs");
-
-var LOCAL_ROOT = ".";
-var BUILD_PROD = LOCAL_ROOT + "/build/prod";
-var BUILD_DIST = LOCAL_ROOT + "/build/dist";
-
-var config = {
-	root: ""
-};
-
-function init(pConfig) {
-
-	config = pConfig;
-
-	// Change cwd to the root project directory
-	process.chdir(config.root);
+const LOCAL_ROOT = ".";
+const BUILD_DEV = "build/dev";
+const BUILD_PROD = "build/prod";
+const BUILD_TEMP = "build/temp";
+const NODE_MODULES_PATH = "./node_modules";
+const fs = require("fs"); // it's included in node.js by default, no need for any additional packages
+const args = process.argv.slice(2);
+if (args.includes("--prod"))
+{
+	process.env.NODE_ENV = "production";
 }
+const isProduction = process.env.NODE_ENV === "production";
+const buildFolder = isProduction ? BUILD_PROD : BUILD_DEV;
+const checkForTypeErrors = !args.includes("--fast");
 
+const {build} = require("esbuild");
 
-function build(pArg0) {
+buildApp();
 
-	arg0 = pArg0 || arg0;
+async function buildApp()
+{
+	console.time("Build time");
 
-	switch (arg0)
+	if (checkForTypeErrors)
 	{
-		case 'dev':
-			build_all();
-			break;
+		console.log("\x1b[33m%s\x1b[0m", "Looking for type errors...");
 
-		case 'prod':
-			build_all(true);
-
-			var arrayOfJsFiles = [];
-
-			var indexContent = require('fs').readFileSync(BUILD_PROD + '/index.html', 'utf-8');
-			var lines = indexContent.split('\n');
-			for (var i = 0; i < lines.length; ++i)
+		try
+		{
+			if (isProduction)
 			{
-				var line = lines[i];
-				if (line.indexOf('<script src="libs') !== -1)
-				{
-					var libFile = line.split('"')[1];
-					console.log(libFile);
-					arrayOfJsFiles.push(libFile);
-				}
+				res = exec("tsc", "--noEmit");
 			}
-			arrayOfJsFiles.push(BUILD_PROD + '/js/app.js');
-
-
-			bt.exec_module("concat -o " + BUILD_PROD + "/js/app.js " + arrayOfJsFiles.join(' '));
-
-			for (var i = 0; i < arrayOfJsFiles.length - 1; ++i)
+			else
 			{
-				bt.rm(BUILD_PROD + arrayOfJsFiles[i].substr(1));
+				res = exec("tsc", `--incremental --composite false --tsBuildInfoFile ${BUILD_TEMP}/tsconfig.tsbuildinfo`);
 			}
-
-			/** --mangle-props reserved=[THREE,WEBVR] --> breaks code! */
-			bt.exec_module("uglifyjs", BUILD_PROD + "/js/app.js" + " --compress --mangle toplevel --output " + BUILD_PROD + "/js/app.js");
-
-
-			var newIndexContent = indexContent.replace(/^.*<script src="libs\/.*$/mg, "");
-
-			bt.rm(BUILD_PROD + '/index.html');
-
-			fs.writeFile(BUILD_PROD + '/index.html', newIndexContent, function (err) {
-				if (err) {
-					throw err;
-				}
-			});
-
-			break;
-
-		default:
-			build_all();
-	}
-}
-
-function build_all(isProd) {
-
-	// clean prod dir
-	bt.clean_dir(BUILD_PROD);
-
-	// copy tiff.min.js and index.html
-	bt.cp(LOCAL_ROOT + "/src/index.html", BUILD_PROD + "/index.html");
-	bt.cp(LOCAL_ROOT + "/src/css/style.css", BUILD_PROD + "/css/style.css");
-
-	if (isProd) {
-		bt.cp(LOCAL_ROOT + "/libs/draco", BUILD_PROD + "/libs/draco");
-	} else {
-		bt.cp(LOCAL_ROOT + "/libs", BUILD_PROD + "/libs");
+		}
+		catch (e)
+		{
+			// typescript error
+			process.exit(1);
+		}
 	}
 
-	ts();
+	console.log("\x1b[33m%s\x1b[0m", "Copying static files...");
 
-	assets();
+	shx(`rm -rf ${buildFolder}`);
+	shx(`mkdir ${buildFolder}/`);
+	shx(`cp src/index.html ${buildFolder}/index.html`);
+
+	assets(buildFolder);
+	libs(buildFolder);
+
+	const promises = [
+		css(buildFolder),
+		buildJs(buildFolder)
+	];
+
+	await Promise.all(promises);
+
+	console.log("\x1b[32m%s\x1b[0m", "Build done!");
+	console.timeEnd("Build time");
 }
 
-function ts() {
+function shx(command)
+{
+	const module = "shx";
+	const args = command;
 
-	var JS_DIR = BUILD_PROD + "/js";
-	bt.clean_dir(JS_DIR);
-	bt.tsc("--target es5 -d --lib es5,dom,es2015,es2015.iterable,es6 --out " + JS_DIR + "/app.js " + " --sourcemap " + LOCAL_ROOT + "/src/ts/Main.ts");
+	return exec_module(module, args);
 }
 
-function assets() {
-
-	bt.clean_dir(BUILD_PROD + "/assets");
-
-	bt.cp(LOCAL_ROOT + "/src/assets", BUILD_PROD + "/assets");
+function exec_module(module, args)
+{
+	return exec(`"${NODE_MODULES_PATH}/.bin/${module}"`, args);
 }
 
-function build_dist() {
+function exec(command, args)
+{
+	//console.log("command", command, args);
 
-	build_all();
+	args = args || "";
 
-	bt.rm(BUILD_DIST);
+	// http://stackoverflow.com/questions/30134236/use-child-process-execsync-but-keep-output-in-console
+	// https://nodejs.org/api/child_process.html#child_process_child_stdio
 
-	bt.cp(BUILD_PROD + "/assets", BUILD_DIST + "/assets");
-	bt.cp(BUILD_PROD + "/css/style.css", BUILD_DIST + "/css/style.css");
-	bt.cp(BUILD_PROD + "/js/app.js", BUILD_DIST + "/js/app.js");
-	bt.cp(BUILD_PROD + "/index.html", BUILD_DIST + "/index.html");
+	const stdio = [
+		0,
+		1, // !
+		2
+	];
 
-	bt.exec_module("uglifyjs", BUILD_DIST + "/js/app.js" + " --compress --mangle" + " --output " + BUILD_DIST + "/js/app.js");
+	let result;
+	try
+	{
+		result = require("child_process").execSync(command + " " + args, {stdio: stdio});
+	}
+	catch (e)
+	{
+		// this is needed for messages to display when from the typescript watcher
+		throw e;
+	}
 
-	bt.exec_module("cleancss", BUILD_DIST + "/css/style.css" + " -o " + BUILD_DIST + "/css/style.css");
+	return result;
 }
 
-// ----------------------------------------------------------------------------------------------------------
-// Export
+function assets(buildFolder)
+{
+	console.log("\x1b[33m%s\x1b[0m", "Copying assets...");
+	shx(`rm -rf ${buildFolder}/assets`);
+	shx(`cp -R ${LOCAL_ROOT}/src/assets ${buildFolder}/assets`);
+}
 
-module.exports = {
-	init: init,
-	build: build
-};
+function libs(buildFolder)
+{
+	console.log("\x1b[33m%s\x1b[0m", "Copying libs...");
+	shx(`rm -rf ${buildFolder}/libs`);
+	shx(`cp -R ${LOCAL_ROOT}/src/libs ${buildFolder}/libs`);
+}
 
-build();
+function readTextFile(filePath)
+{
+	return new Promise((resolve, reject) =>
+	{
+		fs.readFile(filePath, function (err, data)
+		{
+			if (err)
+			{
+				reject(err);
+			}
+			else
+			{
+				resolve(data.toString());
+			}
+		});
+	});
+}
+
+function writeTextFile(filePath, data)
+{
+	return new Promise((resolve, reject) =>
+	{
+		fs.writeFile(filePath, data, function (err)
+		{
+			if (err)
+			{
+				reject(err);
+			}
+			else
+			{
+				resolve(data);
+			}
+		});
+	});
+}
+
+async function replaceTextInFile(filePath, oldText, newText)
+{
+	const regExp = new RegExp(oldText, "g");
+	const fileContent = await readTextFile(filePath);
+	await writeTextFile(filePath, fileContent.replace(regExp, newText));
+}
+
+function css(buildFolder)
+{
+	shx(`cp -R src/css ${buildFolder}/css`);
+}
+
+function buildJs(buildFolder)
+{
+	const jsFile = `${buildFolder}/js/app.bundle.js`;
+
+	const options = {
+		entryPoints: ["./src/ts/Main.ts"],
+		target: "es2017",
+		minify: isProduction,
+		sourcemap: !isProduction,
+		bundle: true,
+		//splitting: true, // for dynamic import (await import)
+		//outdir: buildFolder,
+		outfile: jsFile,
+		external: ["three", "GLTFLoader"]
+		//format: "esm"
+	};
+
+	console.log("\x1b[33m%s\x1b[0m", "Bundling js...");
+
+	return build(options);
+}

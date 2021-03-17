@@ -1,21 +1,28 @@
 {
   "name": "Title",
+  "version": "1.0.0",
   "description": "Title",
-  "version": "0.0.1",
+  "main": "",
+  "directories": {
+    "doc": "docs"
+  },
   "scripts": {
-    "build dev": "node build/build dev",
-    "build prod": "node build/build prod"
+    "build:client": "node build/build",
+    "build:client:prod": "node build/build --prod"
   },
-  "author": "Peter Varga",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "@types/three": "^0.92.25",
-    "concat": "^1.0.3",
-    "fs": "0.0.2",
-    "fs-extra": "^0.24.0",
-    "shelljs": "^0.6.0",
-    "typescript": "^2.9.2",
-    "uglify-es": "^3.3.9"
-  },
-  "repository": "",
-  "license": ""
+    "@types/node": "14.14.32",
+    "@types/three": "0.126.1",
+    "esbuild": "0.9.3",
+    "shx": "0.3.3",
+    "tslib": "2.1.0",
+    "typescript": "4.2.3",
+    "uglifycss": "0.0.29"
+  }
 }

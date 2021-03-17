@@ -1,25 +1,25 @@
-///<reference path='../../../types/three-gltfloader.d.ts'/>
-///<reference path='../../../types/three-dracoloader.d.ts'/>
-///<reference path='./Scene.ts'/>
+declare const THREE: any;
 
-class SceneLoader
+import {SceneManager} from "./SceneManager";
+
+export class SceneLoader
 {
-	private _scene: Scene;
+	private _sceneManager: SceneManager;
 	private _url: string;
-	private _envMap: THREE.CubeTexture;
-	private _mixer: THREE.AnimationMixer;
+	private _envMap: any;//THREE.CubeTexture;
+	private _mixer: any;//THREE.AnimationMixer;
 	
-	constructor(scene: Scene, url: string)
+	constructor(sceneManager: SceneManager, url: string)
 	{
-		this._scene = scene;
+		this._sceneManager = sceneManager;
 		this._url = url;
 
 		const cubeTextureLoader = new THREE.CubeTextureLoader();
-		cubeTextureLoader.setPath(`assets/images/beach/`);
+		cubeTextureLoader.setPath("assets/images/beach/");
 		this._envMap = cubeTextureLoader.load([
-			'posx.jpg', 'negx.jpg',
-			'posy.jpg', 'negy.jpg',
-			'posz.jpg', 'negz.jpg'
+			"posx.jpg", "negx.jpg",
+			"posy.jpg", "negy.jpg",
+			"posz.jpg", "negz.jpg"
 		]);
 
 		this.loadScene(this._url);
@@ -27,9 +27,7 @@ class SceneLoader
 
 	private loadScene = (url: string) =>
 	{
-		DRACOLoader.setDecoderPath('libs/draco/gltf/');
-		const gltfLoader = new GLTFLoader();
-		gltfLoader.setDRACOLoader(new DRACOLoader());
+		const gltfLoader = new THREE.GLTFLoader();
 
 		gltfLoader.load(url, (gltf: any) =>
 		{
@@ -37,17 +35,12 @@ class SceneLoader
 		});
 	};
 
-	public get mixer()
-	{
-		return this._mixer;
-	}
-
 	private onLoad = (gltf: any) =>
 	{
 		const object = gltf.scene;
-		object.traverse((node) =>
+		object.traverse((node: any) =>
 		{
-			if (node.isMesh)
+			if (node instanceof THREE.Mesh)
 			{
 				node.material.envMap = this._envMap;
 			}
@@ -60,6 +53,11 @@ class SceneLoader
 		this._mixer = new THREE.AnimationMixer(object);
 		this._mixer.clipAction(gltf.animations[0]).play();
 
-		this._scene.markerRoot.add(object);
+		this._sceneManager.markerRoot.add(object);
 	};
+
+	public get mixer()
+	{
+		return this._mixer;
+	}
 }
